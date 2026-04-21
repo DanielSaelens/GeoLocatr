@@ -3,8 +3,10 @@ package com.csci448.danielsaelens.Geolocatr.ui
 
 import android.location.Location
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,12 +15,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.csci448.danielsaelens.Geolocatr.R
+import com.csci448.danielsaelens.Geolocatr.util.DataStoreManager
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -34,7 +40,20 @@ fun LocationScreen(
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 0f)
     }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val dataStoreManager = remember { DataStoreManager(context) }
+    val locationPreferences = dataStoreManager.use(lifecycleOwner)
+
     val resources = LocalContext.current.resources
+
+    val mapUiSettings = MapUiSettings(
+         zoomControlsEnabled =  locationPreferences.isZoomControlEnabled
+    )
+    val mapProperties = MapProperties(
+        isTrafficEnabled = locationPreferences.isTrafficEnabled
+
+    )
     LaunchedEffect(location) {
         if (location != null) {
             val bounds = LatLngBounds.Builder()
@@ -55,9 +74,26 @@ fun LocationScreen(
         enabled = isLocationAvailable) {
             Text("Get Current Location")
         }
+        Row{
+            Text(text = "Display Traffic")
+            Switch(
+                checked = locationPreferences.isTrafficEnabled,
+                onCheckedChange = {dataStoreManager.setIsTrafficEnabled(it)}
+            )
+        }
+
+        Row{
+            Text(text =  "Zoom enabled")
+            Switch(
+                checked = locationPreferences.isZoomControlEnabled,
+                onCheckedChange = {dataStoreManager.setIsZoomEnabled(it)}
+            )
+        }
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            cameraPositionState = cameraPositionState,
+            uiSettings = mapUiSettings,
+            properties = mapProperties
         ) {
 
             if(location != null) {
